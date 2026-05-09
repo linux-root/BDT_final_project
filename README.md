@@ -1,92 +1,49 @@
-# Real-Time GitHub Open Source Trend Analytics Dashboard
+# BigData2026 — Final Project
 
-## CS523 Big Data Technologies — Final Project
+End-to-end pipeline: **Data Sources → Kafka → Spark Streaming → HBase → Visualization / Insights**.
 
-### Architecture Overview
+## Grading Map
 
-```
-GitHub Events API
-      │
-      ▼ (every 10 seconds)
-github_producer.py
-      │  JSON events
-      ▼
-Kafka Topic: github-events
-      │
-      ▼ (Spark Structured Streaming)
-GitHubStreamingApp
-      │  foreachBatch → append
-      ▼
-Hive Table: github_events (HDFS/Parquet)
-      │
-      ▼ (periodic batch job)
-GitHubSparkSQLEsApp
-      │  8 dashboard metrics via Spark SQL
-      │  Bonus: JOIN with language_metadata.csv
-      ▼
-Elasticsearch indices
-      │
-      ▼
-Kibana Dashboard
-```
+| #     | Rubric Part                                              | Pts | Implemented in                                                                  |
+|-------|----------------------------------------------------------|----:|---------------------------------------------------------------------------------|
+| 1     | Data Ingestion using Kafka                               |   3 | `ingestion/src/main/java/com/bigdata2026/ingestion/Main.java`                   |
+| 2     | Distributed Processing using Spark Structured Streaming  |   3 | `streaming/src/main/scala/com/bigdata2026/streaming/Main.scala`                 |
+| 3     | Saving Processed Data to HBase                           |   2 | `streaming/src/main/scala/com/bigdata2026/streaming/storage/HBaseSink.scala`    |
+| 4     | Dynamic Dashboards (visualize insights and results)      |   2 | `visualization/backend/` (REST API) + `visualization/frontend/` (Tyrian SPA) + `visualization/common/` (shared DTOs) |
+| 5 ★   | **Bonus** — Spark SQL join with static datasets          |  +2 | `streaming/src/main/scala/com/bigdata2026/streaming/bonus/SparkSqlJoin.scala`   |
+| Total |                                                          |  10 | (10% of course grade)                                                            |
 
-### Dashboard Metrics
-
-| # | Metric | ES Index |
-|---|--------|----------|
-| 1 | New repositories created over time (5-min window) | `gh_new_repos` |
-| 2 | Source-code activity speed (push commit count) | `gh_push_activity` |
-| 3 | Top active repositories (by total events) | `gh_top_repos` |
-| 4 | Trending repositories (weighted score) | `gh_trending_repos` |
-| 5 | Trending programming languages (Spark SQL JOIN) | `gh_trending_languages` |
-| 6 | Stars and forks momentum | `gh_stars_forks` |
-| 7 | Release activity | `gh_releases` |
-| 8 | Event type distribution | `gh_event_distribution` |
-
-### Technology Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Ingestion | GitHub REST API v3 + Python kafka-python |
-| Message Queue | Apache Kafka 3.4 |
-| Stream Processing | Apache Spark 3.2 Structured Streaming |
-| Storage | Apache Hive (on HDFS, Parquet format) |
-| Analytics | Spark SQL (with static language metadata JOIN) |
-| Visualization | Elasticsearch 7.15.2 + Kibana 7.15.2 |
-
-### Project Structure
+## Architecture
 
 ```
-github_activity/
-├── README.md                   ← This file
-├── commands.txt                ← Step-by-step run instructions
-├── docker-compose.yml          ← Elasticsearch + Kibana
-├── pom.xml                     ← Maven build (Spark + Kafka + ES)
-├── language_metadata.csv       ← Static dataset for bonus SQL JOIN
-├── producer/
-│   └── github_producer.py      ← GitHub API → Kafka producer
-├── scripts/
-│   └── kibana_setup.sh         ← Auto-creates Kibana index patterns
-└── src/
-    └── main/
-        └── java/
-            ├── GitHubStreamingApp.java    ← Kafka → Hive (Structured Streaming)
-            └── GitHubSparkSQLEsApp.java   ← Hive → Elasticsearch (Spark SQL)
+Data Sources ──► Kafka ──► Spark Structured Streaming ──► HBase ──► { Backend API ──► Frontend Dashboard }
+   (ingestion)              (streaming + bonus join)      (storage)         (visualization — Part 4)
 ```
 
-### Prerequisites
+## Modules
 
-- Docker + Docker Compose (for the main cs523bdt-lab environment)
-- Python 3.x with `kafka-python` and `requests` packages
-- GitHub Personal Access Token (optional but recommended for higher rate limits)
+| Module       | Stack                                         | Role                                          |
+|--------------|-----------------------------------------------|-----------------------------------------------|
+| `ingestion`  | Java 11 + Kafka clients                       | Part 1 — producers from data sources to Kafka |
+| `streaming`  | Scala 2.12 + Spark 3.1.2 Structured Streaming | Parts 2 + 3 + 5 — Kafka → enrich → HBase      |
+| `visualization/common`   | Scala 3 crossProject (JVM + JS)      | Shared DTOs / API contracts             |
+| `visualization/backend`  | Scala 3 + ZIO + Tapir + HBase client | Part 4 — REST API serving HBase reads   |
+| `visualization/frontend` | Scala.js + Tyrian                    | Part 4 — Visualization SPA (dashboards) |
 
-### Quick Start
+## Prerequisites
 
-See `commands.txt` for the full step-by-step guide.
+- JDK 11
+- sbt 1.10.7
+- Docker (for local Kafka + HBase)
+- Node 20+ (frontend dev server, optional)
 
-### Notes on GitHub API Rate Limits
+## Quickstart
 
-- **Without token**: 60 requests/hour → poll every 60 seconds
-- **With token**: 5,000 requests/hour → poll every 10 seconds
-- Set `GITHUB_TOKEN` environment variable to use authentication
-- The producer fetches up to 100 events per request from `/events` endpoint
+```bash
+docker compose up -d                # Kafka + HBase locally
+sbt compile                         # builds all modules
+sbt ingestion/run                   # Part 1 — runs the Java Kafka producer
+sbt streaming/run                   # Part 2 + 3 + 5 — runs the Spark streaming job
+sbt backend/run                            # Part 4 — runs the ZIO + Tapir API
+sbt frontend/fastLinkJS                    # Part 4 — produces ESM bundle for the dashboard
+```

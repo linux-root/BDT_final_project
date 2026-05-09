@@ -11,3 +11,4 @@ project/project/
 project/metals.sbt
 *.class
 *.log
+/.mcp.json

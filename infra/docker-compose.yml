@@ -20,7 +20,7 @@ services:
     ports: ["29092:29092"]   # host access on localhost:29092
 
   hbase:
-    image: harisekhon/hbase:2.4
+    image: harisekhon/hbase:2.1
     environment:
       HBASE_CONF_hbase_rootdir: file:///hbase-data
     ports:

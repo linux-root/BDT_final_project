@@ -8,7 +8,7 @@ val scala2 = "2.12.18"
 
 val sparkVersion  = "3.1.2"
 val kafkaVersion  = "3.2.3"
-val hbaseVersion  = "2.4.18"
+val hbaseVersion  = "2.1.10"
 val zioVersion    = "2.1.16"
 val tapirVersion  = "1.11.40"
 val tyrianVersion = "0.14.0"
